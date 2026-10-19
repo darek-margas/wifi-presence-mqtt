@@ -1,0 +1,57 @@
+# wifi-presence-mqtt configuration: access points and devices.
+# Mount it at /config/config.yaml. Credentials stay in the environment: ${NAME} is
+# replaced by that variable (or by the content of the file NAME_FILE names).
+# Check it with:  docker run --rm -v ./config.yaml:/config/config.yaml:ro --env-file .env \
+#                   ghcr.io/darek-margas/wifi-presence-mqtt:beta --check-config
+
+mqtt:
+  host: mosquitto                  # or MQTT_HOST in the environment
+  username: wifi-presence          # optional
+  password: ${MQTT_PASSWORD}       # optional
+  # port: 1883
+  # topic_prefix: wifi-presence
+  # tls: true
+  # ca_file: /config/ca.pem
+
+presence:
+  grace_period: 180                # seconds unseen before a device counts as away
+  # poll_interval: 60              # seconds between reads of every access point
+  # instant_arrivals: true         # MikroTik and OpenWrt: poll as soon as a client joins
+  # publish_all_clients: false     # also publish every client seen (neighbours too)
+
+access_points:
+  # id: used in topics (letters, digits, - and _); name, area: optional.
+  # The other keys are the type's own; run `wifi-ap-probe --list-types` for the types.
+  - id: hallway
+    name: Hallway
+    area: Hallway
+    type: openwrt_ssh
+    host: 192.168.1.2
+    username: root
+    password: ${HALLWAY_PASSWORD}
+
+  - id: upstairs
+    area: Bedroom
+    type: mikrotik_capsman_ssh     # one entry per CAP, all with the controller's login
+    host: 192.168.1.1
+    username: presence
+    password: ${MIKROTIK_PASSWORD}
+    cap: ap_upstairs
+
+  - id: garden
+    area: Garden
+    type: cisco_wlc_snmp           # one entry per Cisco AP, with the controller's address
+    host: 192.168.1.20
+    ap_name: AP01
+    snmp_version: v2c
+    community: ${CISCO_COMMUNITY}
+
+devices:
+  # id: used in topics; it stays the same when the MAC changes (new phone, private
+  # Wi-Fi address): only this line changes, your flows don't.
+  - id: alice_phone
+    name: Alice's phone
+    mac: 5C:AD:BA:00:00:01
+  - id: bob_phone
+    name: Bob's phone
+    mac: 5C:AD:BA:00:00:02
