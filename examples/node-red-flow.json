@@ -1,0 +1,12 @@
+[
+  {"id": "wp_tab", "type": "tab", "label": "Wi-Fi presence"},
+  {"id": "wp_broker", "type": "mqtt-broker", "name": "Broker", "broker": "mosquitto", "port": "1883", "autoConnect": true, "protocolVersion": "4"},
+  {"id": "wp_state", "type": "mqtt in", "z": "wp_tab", "name": "Alice home?", "topic": "wifi-presence/device/alice_phone/state", "qos": "1", "datatype": "utf8", "broker": "wp_broker", "x": 140, "y": 80, "wires": [["wp_switch"]]},
+  {"id": "wp_switch", "type": "switch", "z": "wp_tab", "name": "home / away", "property": "payload", "rules": [{"t": "eq", "v": "home", "vt": "str"}, {"t": "eq", "v": "not_home", "vt": "str"}], "checkall": "true", "outputs": 2, "x": 330, "y": 80, "wires": [["wp_home"], ["wp_away"]]},
+  {"id": "wp_home", "type": "debug", "z": "wp_tab", "name": "Alice arrived: lights on, alarm off...", "active": true, "complete": "payload", "x": 600, "y": 60, "wires": []},
+  {"id": "wp_away", "type": "debug", "z": "wp_tab", "name": "Alice left: everyone away?", "active": true, "complete": "payload", "x": 570, "y": 100, "wires": []},
+  {"id": "wp_room", "type": "mqtt in", "z": "wp_tab", "name": "Which access point (room)", "topic": "wifi-presence/device/+/access_point", "qos": "1", "datatype": "utf8", "broker": "wp_broker", "x": 170, "y": 160, "wires": [["wp_room_dbg"]]},
+  {"id": "wp_room_dbg", "type": "debug", "z": "wp_tab", "name": "topic says whose, payload says where", "active": true, "complete": "true", "x": 500, "y": 160, "wires": []},
+  {"id": "wp_events", "type": "mqtt in", "z": "wp_tab", "name": "Events", "topic": "wifi-presence/event", "qos": "1", "datatype": "json", "broker": "wp_broker", "x": 110, "y": 240, "wires": [["wp_events_dbg"]]},
+  {"id": "wp_events_dbg", "type": "debug", "z": "wp_tab", "name": "arrived / left / roamed", "active": true, "complete": "payload", "x": 360, "y": 240, "wires": []}
+]

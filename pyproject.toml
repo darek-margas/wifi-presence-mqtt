@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wifi-presence-mqtt"
+dynamic = ["version"]
+description = "Wi-Fi presence over MQTT from your access points' own client lists: who is home, on which access point, since when. For Node-RED, openHAB, ioBroker, Home Assistant and anything that speaks MQTT."
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{ name = "Darek Margas" }]
+requires-python = ">=3.12"
+dependencies = [
+    "wifi-ap-associations>=0.12.2,<0.13",
+    "aiomqtt>=2.3,<3",
+    "ruamel.yaml>=0.18",
+]
+keywords = ["wifi", "presence", "mqtt", "node-red", "openhab", "access point", "openwrt", "mikrotik"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Programming Language :: Python :: 3",
+    "Topic :: Home Automation",
+    "Topic :: System :: Networking :: Monitoring",
+]
+
+[project.scripts]
+wifi-presence-mqtt = "wifi_presence_mqtt.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/darek-margas/wifi-presence-mqtt"
+Issues = "https://github.com/darek-margas/wifi-presence-mqtt/issues"
+Library = "https://github.com/darek-margas/wifi-ap-associations"
+
+[tool.hatch.version]
+path = "src/wifi_presence_mqtt/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wifi_presence_mqtt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

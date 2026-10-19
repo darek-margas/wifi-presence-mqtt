@@ -1,0 +1,19 @@
+# The bridge, with a Mosquitto broker of its own (leave that service out if you have a
+# broker already, and set mqtt.host / MQTT_HOST to it).
+services:
+  wifi-presence:
+    image: ghcr.io/darek-margas/wifi-presence-mqtt:beta
+    restart: unless-stopped
+    env_file: .env                       # MQTT_PASSWORD=..., HALLWAY_PASSWORD=..., TZ=...
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./data:/data                     # visits and today's counts across restarts
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf   # no login: for a trusted LAN only
+    ports:
+      - "1883:1883"

@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: A broker for the end-to-end test
+        # The official image ships a config that listens on all addresses without login.
+        run: docker run -d --name mosquitto -p 1883:1883 eclipse-mosquitto:2 mosquitto -c /mosquitto-no-auth.conf
+      - name: Install
+        run: pip install -e . pytest ruff
+      - name: Ruff
+        run: ruff check --select E9,F src tests
+      - name: Tests (including the end-to-end test against the broker)
+        env:
+          MQTT_TEST_HOST: 127.0.0.1
+        run: python -m pytest -v
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build the image
+        run: docker build -t wifi-presence-mqtt:test .
+      - name: The example configuration passes the check inside the image
+        run: |
+          docker run --rm -v "$PWD/examples/config.yaml:/config/config.yaml:ro" \
+            -e MQTT_PASSWORD=x -e HALLWAY_PASSWORD=x -e MIKROTIK_PASSWORD=x -e CISCO_COMMUNITY=x \
+            wifi-presence-mqtt:test --check-config
+      - name: A broken configuration exits with status 1 and says where
+        run: |
+          printf 'mqtt:\n  host: broker\naccess_points:\n  - id: x\n    type: openwrt\n' > broken.yaml
+          set +e
+          docker run --rm -v "$PWD/broken.yaml:/config/config.yaml:ro" wifi-presence-mqtt:test > out.txt 2>&1
+          status=$?
+          set -e
+          cat out.txt
+          test "$status" -eq 1
+          grep -q "line 5, column 5: access_points\[0\] (x): type 'openwrt' is not a known type" out.txt

@@ -1,0 +1,113 @@
+name: publish
+
+# Releasing is a push: set __version__ in src/wifi_presence_mqtt/__init__.py, add a
+# "## <version>" section to CHANGELOG.md, and push to main. If that version has no tag
+# yet, this workflow runs the tests, builds the container for amd64 and arm64, pushes it
+# to ghcr.io/darek-margas/wifi-presence-mqtt, then creates the tag v<version> and a
+# GitHub release with that changelog section. A version with a pre-release part (0.1.0b1)
+# is tagged "beta" and released as a pre-release; a final one is tagged "latest".
+# Pushes that don't change the version only run the tests.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      new: ${{ steps.v.outputs.new }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/wifi_presence_mqtt/__init__.py)
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if echo "$VERSION" | grep -Eq '(a|b|rc)[0-9]+$'; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION is already released"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION is new"
+          fi
+
+  tests:
+    needs: version
+    if: needs.version.outputs.new == 'true' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/tests.yml
+
+  container:
+    needs: [version, tests]
+    if: needs.version.outputs.new == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: CHANGELOG has a section for this version
+        run: grep -q "^## ${{ needs.version.outputs.version }}\b" CHANGELOG.md
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Tags
+        id: tags
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}
+          if [ "$PRERELEASE" = true ]; then CHANNEL=beta; else CHANNEL=latest; fi
+          echo "tags=$IMAGE:$VERSION,$IMAGE:$CHANNEL" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.licenses=GPL-3.0-only
+            org.opencontainers.image.description=Wi-Fi presence over MQTT from your access points' own client lists
+
+  release:
+    needs: [version, container]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          awk -v v="$VERSION" '/^## / { if (found) exit; if ($2 == v) { found = 1; next } } found { print }' CHANGELOG.md > notes.md
+          FLAG=""
+          if [ "$PRERELEASE" = true ]; then FLAG="--prerelease"; fi
+          gh release create "v$VERSION" --target "$GITHUB_SHA" $FLAG \
+            --title "wifi-presence-mqtt v$VERSION" --notes-file notes.md
