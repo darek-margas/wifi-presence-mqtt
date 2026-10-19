@@ -7,7 +7,8 @@ install on the access points.
 
 > **Beta (0.1.0b3).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
 > and Cisco Catalyst 9800 (SSH or SNMP). UniFi and TP-Link Omada come in a later beta.
-> Feedback welcome in the [issues](https://github.com/darek-margas/wifi-presence-mqtt/issues).
+> Guides in the [wiki](https://github.com/darek-margas/wifi-presence-mqtt/wiki); feedback
+> welcome in the [issues](https://github.com/darek-margas/wifi-presence-mqtt/issues).
 
 Why access points: a phone stays connected to Wi-Fi while it sleeps, so it doesn't
 "leave" every few minutes the way ping or ARP based presence does, and the access
