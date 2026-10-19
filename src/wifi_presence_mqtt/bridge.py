@@ -332,6 +332,8 @@ class Bridge:
     async def poll_once(self) -> None:
         """Read every access point once and publish what changed."""
         started = time.monotonic()
+        # The reads happen between this and the end of the round (fast departure).
+        round_started = utcnow()
         ids = list(self.drivers)
         results = await poll_all([self.drivers[i] for i in ids])
         reads = []
@@ -345,7 +347,7 @@ class Bridge:
         now = utcnow()
         outage = False
         try:
-            self.tracker.update(reads, now, local_today())
+            self.tracker.update(reads, now, local_today(), started=round_started)
         except AllAccessPointsFailed:
             outage = True
         if outage and not self._outage:
