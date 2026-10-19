@@ -19,6 +19,10 @@ presence:
   # instant_arrivals: true         # MikroTik and OpenWrt: poll as soon as a client joins
   # publish_all_clients: false     # also publish every client seen (neighbours too)
 
+homeassistant:
+  discovery: false                 # true: entities in Home Assistant via its MQTT integration
+  # discovery_prefix: homeassistant
+
 access_points:
   # id: used in topics (letters, digits, - and _); name, area: optional.
   # The other keys are the type's own; run `wifi-ap-probe --list-types` for the types.

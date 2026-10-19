@@ -4,7 +4,7 @@ services:
   wifi-presence:
     image: ghcr.io/darek-margas/wifi-presence-mqtt:beta
     restart: unless-stopped
-    env_file: .env                       # MQTT_PASSWORD=..., HALLWAY_PASSWORD=..., TZ=...
+    env_file: .env                       # MQTT_PASSWORD=..., HALLWAY_PASSWORD=..., TZ=..., HA_DISCOVERY=true
     volumes:
       - ./config.yaml:/config/config.yaml:ro
       - ./data:/data                     # visits and today's counts across restarts

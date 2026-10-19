@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0b3
+
+- **Home Assistant MQTT discovery** (`HA_DISCOVERY=true`, or `homeassistant.discovery`
+  in the file; off by default): Home Assistant's MQTT integration creates, per tracked
+  device, a device tracker (home / not_home / unknown, with the attributes) and sensors
+  Access point, Area, Home since, Signal quality, Roams today and Short drops today; per
+  access point Connectivity, Clients and Average signal quality on a device with its
+  model and firmware; and the bridge's Status. Everything is unavailable while the
+  bridge is offline. Entities of removed devices and access points, or all of them when
+  discovery is turned off, are removed at the next start.
+- README: the complete Docker Compose setup with its `.env`.
+
 ## 0.1.0b2
 
 From running the image with the example compose file:

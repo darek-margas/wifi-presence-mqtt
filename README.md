@@ -5,7 +5,7 @@ own lists of connected clients.** For Node-RED, openHAB, ioBroker, Domoticz, Hom
 Assistant or anything else that speaks MQTT. Runs as a small container; nothing to
 install on the access points.
 
-> **Beta (0.1.0b2).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
+> **Beta (0.1.0b3).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
 > and Cisco Catalyst 9800 (SSH or SNMP). UniFi and TP-Link Omada come in a later beta.
 > Feedback welcome in the [issues](https://github.com/darek-margas/wifi-presence-mqtt/issues).
 
@@ -50,6 +50,59 @@ from the shared library
 The image is built for `amd64` and `arm64` (Raspberry Pi 4/5). It only makes outgoing
 connections: to the access points (SSH 22, SNMP 161) and to the broker.
 
+### Docker Compose
+
+A complete setup: the bridge and a Mosquitto broker of its own, in one folder with
+`config.yaml` (see [Configuration](#configuration)) and a `.env` file.
+
+`docker-compose.yml`:
+
+```yaml
+services:
+  wifi-presence:
+    image: ghcr.io/darek-margas/wifi-presence-mqtt:beta
+    restart: unless-stopped
+    env_file: .env                         # credentials and settings, see below
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./data:/data                       # visits and today's counts across restarts
+    depends_on:
+      - mosquitto
+
+  # Leave this service out if you have a broker already, and point MQTT_HOST at it.
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf   # no login: for a trusted LAN only
+    ports:
+      - "1883:1883"
+```
+
+`.env` (never commit it):
+
+```bash
+TZ=Europe/Warsaw                 # your time zone: "today" counts reset at local midnight
+MQTT_HOST=mosquitto              # the broker (here the service above)
+# MQTT_USERNAME=wifi-presence
+# MQTT_PASSWORD=
+HALLWAY_PASSWORD=secret          # referenced in config.yaml as ${HALLWAY_PASSWORD}
+# HA_DISCOVERY=true              # entities in Home Assistant through its MQTT integration
+# LOG_LEVEL=debug
+```
+
+Then:
+
+```bash
+docker compose up -d
+docker compose logs -f wifi-presence
+```
+
+To update: `docker compose pull && docker compose up -d`. The state in `./data` is kept.
+With a broker you already run (Home Assistant's Mosquitto add-on, for instance), drop
+the `mosquitto` service and `depends_on`, and set `MQTT_HOST`, `MQTT_USERNAME` and
+`MQTT_PASSWORD` to that broker's. The same file is in
+[`examples/docker-compose.yml`](examples/docker-compose.yml).
+
 ## Configuration
 
 Two parts: **environment variables** for the broker, the presence settings and
@@ -68,6 +121,8 @@ takes the environment's value (logged once at start).
 | `POLL_INTERVAL` | `presence.poll_interval` | `60` | seconds between reads (10-3600) |
 | `INSTANT_ARRIVALS` | `presence.instant_arrivals` | `true` | |
 | `PUBLISH_ALL_CLIENTS` | `presence.publish_all_clients` | `false` | also publish every client seen |
+| `HA_DISCOVERY` | `homeassistant.discovery` | `false` | entities in Home Assistant (see below) |
+| `HA_DISCOVERY_PREFIX` | `homeassistant.discovery_prefix` | `homeassistant` | |
 | `LOG_LEVEL` | | `info` | `debug` shows each line the access points report |
 | `TZ` | | UTC | your time zone: "today" counts reset at local midnight |
 | `CONFIG_FILE`, `DATA_DIR` | | `/config/config.yaml`, `/data` | |
@@ -152,6 +207,28 @@ point removed from the configuration has its topics cleared at the next start.
 The `state`, `access_point`, `home_since` and `away_since` topics are plain text, so a
 Node-RED `mqtt in` node works without parsing JSON. An example flow:
 [`examples/node-red-flow.json`](examples/node-red-flow.json) (Menu → Import).
+
+## Home Assistant (MQTT discovery)
+
+With `HA_DISCOVERY=true`, Home Assistant's MQTT integration creates the entities by
+itself, nothing else to install:
+
+| Per | Entities |
+|---|---|
+| tracked device | a **device tracker** (home / not_home; unknown during an outage, with the attributes above), **Access point**, **Area**, **Home since**, **Signal quality** (%), **Roams today**, **Short drops today** |
+| access point | **Connectivity**, **Clients**, **Average signal quality**, on a device with its model and firmware (and its area suggested) |
+| the bridge | **Status**; all other entities become unavailable while the bridge is offline |
+
+Each tracked device's entities sit on one Home Assistant device, linked to the bridge.
+Removing a device or an access point from `config.yaml`, or turning discovery off,
+removes its entities at the next start.
+
+Running Home Assistant anyway? The
+[Wi-Fi Association Presence](https://github.com/darek-margas/wifi-association-presence)
+integration does the same inside Home Assistant (plus UniFi and TP-Link Omada, and the
+area of the access point's own device). The bridge with discovery suits a setup where
+the access points are reached from another machine, or Home Assistant isn't the only
+consumer.
 
 ## Troubleshooting
 
