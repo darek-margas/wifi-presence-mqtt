@@ -188,7 +188,9 @@ class Bridge:
         )
         # D-Link DAPs report joins as SNMP traps to this port (one listener for all).
         snmp_trap.LISTENER.configure(port=config.presence.snmp_trap_port)
-        self._departure_polls: dict[str, asyncio.TimerHandle] = {}
+        # Fast departure: the polls due at the deadlines after leaves, one per leave (a
+        # later leave never moves an earlier deadline).
+        self._departure_polls: set[asyncio.TimerHandle] = set()
         self.trigger = asyncio.Event()
         self.data_dir = Path(config.data_dir)
         self.state_file = self.data_dir / "state.json"
@@ -402,11 +404,18 @@ class Bridge:
             return
         _LOGGER.debug("Client left %s: devices missing from it are away in %s", ap_id, fast)
         self.tracker.note_leave(ap_id, utcnow())
-        if (previous := self._departure_polls.pop(ap_id, None)) is not None:
-            previous.cancel()
-        self._departure_polls[ap_id] = asyncio.get_running_loop().call_later(
-            fast.total_seconds() + 1, self.trigger.set
-        )
+
+        def due() -> None:
+            self._departure_polls.discard(handle)
+            self.trigger.set()
+
+        handle = asyncio.get_running_loop().call_later(fast.total_seconds() + 1, due)
+        self._departure_polls.add(handle)
+
+    def cancel_departure_polls(self) -> None:
+        for handle in self._departure_polls:
+            handle.cancel()
+        self._departure_polls.clear()
 
     def start_watchers(self) -> list[asyncio.Task[None]]:
         """Instant arrivals: one watch per watch key, for the types that can."""
@@ -466,5 +475,6 @@ async def run(config: Config) -> None:
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        bridge.cancel_departure_polls()
         bridge.save(clean=True)
         _LOGGER.info("Stopped; state saved")

@@ -360,8 +360,8 @@ def test_fast_departure_after_a_reported_leave(tmp_path, monkeypatch) -> None:
 
     async def leave() -> None:
         b.on_leave("hall")  # the access point reported a client leaving
-        assert "hall" in b._departure_polls  # the poll at the deadline is booked
-        b._departure_polls.pop("hall").cancel()
+        assert len(b._departure_polls) == 1  # the poll at the deadline is booked
+        b.cancel_departure_polls()
 
     clock.advance(10)
     asyncio.run(leave())
@@ -375,3 +375,28 @@ def test_fast_departure_after_a_reported_leave(tmp_path, monkeypatch) -> None:
     assert link.topic("device/phone/state") == "not_home"
     assert link.topic("device/phone/away_since") == "2026-10-20T08:00:40+00:00"  # leave + 30 s
     assert link.events[-1]["event"] == "left"
+
+
+def test_a_later_leave_never_postpones_an_earlier_deadline(tmp_path) -> None:
+    b = Bridge(make_config(tmp_path, fast_departure=30), FakeLink())
+    fired: list[str] = []
+
+    async def main() -> None:
+        loop = asyncio.get_running_loop()
+        b.on_leave("hall")
+        first = loop.time() + 31
+        await asyncio.sleep(0.05)
+        b.on_leave("hall")  # another client leaves while the first deadline is pending
+        # Both deadlines are booked; the earliest is still the first leave's.
+        assert len(b._departure_polls) == 2
+        assert min(h.when() for h in b._departure_polls) <= first
+        b.cancel_departure_polls()
+        assert not b._departure_polls
+        b.tracker.fast_departure = timedelta(seconds=-0.99)  # a deadline due at once
+        b.on_leave("den")
+        await asyncio.wait_for(b.trigger.wait(), 2)
+        fired.append("poll")
+        assert not b._departure_polls  # a poll that fired is forgotten
+
+    asyncio.run(main())
+    assert fired == ["poll"]
