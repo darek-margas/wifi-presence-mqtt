@@ -9,6 +9,8 @@ if [ "$(id -u)" = "0" ]; then
     if [ "$(stat -c %u "$DATA_DIR")" != "1000" ]; then
         chown -R 1000:1000 "$DATA_DIR"
     fi
+    # The bridge user's own home, not root's (libraries look for ~/.ssh there).
+    export HOME="$DATA_DIR" USER=bridge
     exec setpriv --reuid=1000 --regid=1000 --clear-groups wifi-presence-mqtt "$@"
 fi
 exec wifi-presence-mqtt "$@"
