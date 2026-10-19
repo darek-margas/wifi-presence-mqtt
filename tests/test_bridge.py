@@ -329,3 +329,21 @@ def test_the_link_publishes_only_changes_and_everything_after_a_reconnect() -> N
         assert sorted(sent) == [("a", "1", True), ("b", "", True)]
 
     asyncio.run(main())
+
+
+def test_a_state_saved_while_presence_was_unknown_raises_no_event(tmp_path, monkeypatch) -> None:
+    clock = Clock(monkeypatch)
+    first = Bridge(make_config(tmp_path), FakeLink())
+    first.restore()
+    FakeAP.answers = {"hall": AccessPointError("down"), "den": AccessPointError("down")}
+    round_(first)  # nothing readable since start
+    first.save(clean=True)
+    assert json.loads((tmp_path / "data" / "state.json").read_text())["presence_known"] is False
+    clock.advance(60)
+    link = FakeLink()
+    second = Bridge(make_config(tmp_path), link)
+    second.restore()
+    FakeAP.answers = {"hall": [(PHONE, -50)], "den": []}
+    round_(second)
+    assert link.topic("device/phone/state") == "home"
+    assert link.events == []

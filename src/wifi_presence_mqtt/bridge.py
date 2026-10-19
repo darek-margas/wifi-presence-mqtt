@@ -220,8 +220,11 @@ class Bridge:
         # Who was home when the state was saved: the first round's events are measured
         # against that, so an arrival while stopped is an event, and a visit that went
         # on across the restart isn't (the time stopped is no evidence of leaving).
+        # Saved while presence wasn't known (no access point read since start, or an
+        # outage): nothing to compare with, so the first round raises no events.
         saved = stored_at(stored.get("tracker"))
-        self._device_views = self._views(saved, outage=False)[0] if saved else {}
+        known = stored.get("presence_known", True) is True
+        self._device_views = self._views(saved, outage=False)[0] if saved and known else {}
 
     def save(self, clean: bool = False) -> None:
         now = utcnow()
@@ -229,6 +232,7 @@ class Bridge:
             "version": STATE_VERSION,
             "tracker": self.tracker.to_storage(now, clean=clean),
             "published": {"devices": sorted(self.devices), "access_points": sorted(self.access_points)},
+            "presence_known": self.tracker.last_success is not None and not self._outage,
         }
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
