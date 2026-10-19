@@ -64,6 +64,12 @@ class PresenceSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class HomeAssistantSettings:
+    discovery: bool = False
+    discovery_prefix: str = "homeassistant"
+
+
+@dataclass(frozen=True, slots=True)
 class AccessPointConfig:
     id: str
     type: str
@@ -86,6 +92,7 @@ class Config:
     presence: PresenceSettings
     access_points: list[AccessPointConfig]
     devices: list[DeviceConfig]
+    homeassistant: HomeAssistantSettings = field(default_factory=HomeAssistantSettings)
     data_dir: str = DEFAULT_DATA_DIR
     log_level: str = "info"
     # What the environment overrode in the file, logged once at start.
@@ -121,11 +128,14 @@ _SETTINGS = (
     _Setting("presence", "poll_interval", "POLL_INTERVAL", "int", 60, minimum=10, maximum=3600),
     _Setting("presence", "instant_arrivals", "INSTANT_ARRIVALS", "bool", True),
     _Setting("presence", "publish_all_clients", "PUBLISH_ALL_CLIENTS", "bool", False),
+    _Setting("homeassistant", "discovery", "HA_DISCOVERY", "bool", False),
+    _Setting("homeassistant", "discovery_prefix", "HA_DISCOVERY_PREFIX", "str", "homeassistant"),
 )
+_SECTIONS = ("mqtt", "presence", "homeassistant")
 _SECTION_KEYS = {
-    section: {s.key for s in _SETTINGS if s.section == section} for section in ("mqtt", "presence")
+    section: {s.key for s in _SETTINGS if s.section == section} for section in _SECTIONS
 }
-_TOP_LEVEL = ("mqtt", "presence", "access_points", "devices")
+_TOP_LEVEL = (*_SECTIONS, "access_points", "devices")
 _AP_OWN_KEYS = ("id", "type", "name", "area")
 _DEVICE_KEYS = ("id", "name", "mac")
 _TRUE = {"true", "yes", "on", "1"}
@@ -273,7 +283,7 @@ def _load_yaml(path: str, reader: _Reader) -> CommentedMap | None:
     if data is None:
         return CommentedMap()
     if not isinstance(data, CommentedMap):
-        reader.error(path, "the file must be a mapping of sections (mqtt, presence, access_points, devices)")
+        reader.error(path, "the file must be a mapping of sections (mqtt, presence, homeassistant, access_points, devices)")
         return None
     return data
 
@@ -290,8 +300,8 @@ def _section(reader: _Reader, data: CommentedMap, name: str, kind: type) -> Any:
 
 
 def _settings(reader: _Reader, data: CommentedMap) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """mqtt and presence: environment over file over defaults."""
-    values: dict[str, dict[str, Any]] = {"mqtt": {}, "presence": {}}
+    """mqtt, presence and homeassistant: environment over file over defaults."""
+    values: dict[str, dict[str, Any]] = {name: {} for name in _SECTIONS}
     notes: list[str] = []
     sections = {name: _section(reader, data, name, CommentedMap) for name in values}
     for name, section in sections.items():
@@ -539,6 +549,7 @@ def load(env: Mapping[str, str] | None = None) -> Config:
     return Config(
         mqtt=MqttSettings(**values["mqtt"]),
         presence=PresenceSettings(**values["presence"]),
+        homeassistant=HomeAssistantSettings(**values["homeassistant"]),
         access_points=access_points,
         devices=devices,
         data_dir=env.get("DATA_DIR", DEFAULT_DATA_DIR),

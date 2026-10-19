@@ -32,7 +32,7 @@ from wifi_ap_associations.tracker import (
     watch_forever,
 )
 
-from . import views
+from . import discovery, views
 from .config import Config, MqttSettings
 
 _LOGGER = logging.getLogger("wifi_presence_mqtt")
@@ -220,6 +220,12 @@ class Bridge:
         # Who was home when the state was saved: the first round's events are measured
         # against that, so an arrival while stopped is an event, and a visit that went
         # on across the restart isn't (the time stopped is no evidence of leaving).
+        # Home Assistant entities no longer configured (or discovery turned off): an
+        # empty config removes them.
+        stale = set(stored.get("discovery_topics") or []) - discovery.discovery_topics(self.config)
+        if stale:
+            _LOGGER.info("Removing %d Home Assistant discovery entities no longer configured", len(stale))
+            self.link.set_retained(dict.fromkeys(sorted(stale), ""))
         # Saved while presence wasn't known (no access point read since start, or an
         # outage): nothing to compare with, so the first round raises no events.
         saved = stored_at(stored.get("tracker"))
@@ -233,6 +239,7 @@ class Bridge:
             "tracker": self.tracker.to_storage(now, clean=clean),
             "published": {"devices": sorted(self.devices), "access_points": sorted(self.access_points)},
             "presence_known": self.tracker.last_success is not None and not self._outage,
+            "discovery_topics": sorted(discovery.discovery_topics(self.config)),
         }
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -343,6 +350,7 @@ class Bridge:
 
         devices, aps = self._views(now, outage)
         messages = views.retained_messages(self.prefix, devices, aps)
+        messages |= discovery.messages(self.config, aps)
         if self.config.presence.publish_all_clients and not outage:
             messages[f"{self.prefix}/clients"] = views.clients_payload(self.tracker.sightings, now)
         self.link.set_retained(messages)

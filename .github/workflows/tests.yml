@@ -20,7 +20,7 @@ jobs:
         # The official image ships a config that listens on all addresses without login.
         run: docker run -d --name mosquitto -p 1883:1883 eclipse-mosquitto:2 mosquitto -c /mosquitto-no-auth.conf
       - name: Install
-        run: pip install -e . pytest ruff
+        run: pip install -e . pytest ruff jinja2
       - name: Ruff
         run: ruff check --select E9,F src tests
       - name: Tests (including the end-to-end test against the broker)

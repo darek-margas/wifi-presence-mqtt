@@ -176,7 +176,7 @@ secrets rather than in the file. Only the devices you list are published, unless
 ## Development
 
 ```bash
-pip install -e . pytest ruff
+pip install -e . pytest ruff jinja2
 ruff check --select E9,F src tests
 python -m pytest                      # MQTT_TEST_HOST=<broker> also runs the end-to-end test
 ```
