@@ -11,13 +11,18 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN pip install . \
-    && useradd --system --uid 1000 --home-dir /data bridge \
+    && groupadd --system --gid 1000 bridge \
+    && useradd --system --uid 1000 --gid 1000 --home-dir /data bridge \
     && mkdir -p /data /config \
-    && chown bridge /data
+    && chown bridge:bridge /data \
+    && chmod 0755 /usr/local/bin/docker-entrypoint.sh
 
-USER bridge
+# Starts as root only to hand /data to the bridge user (a bind-mounted ./data is created
+# by Docker as root), then drops to that user: the bridge itself never runs as root.
+# See docker-entrypoint.sh.
 VOLUME ["/data"]
 HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
     CMD ["wifi-presence-mqtt", "--health"]
-ENTRYPOINT ["wifi-presence-mqtt"]
+ENTRYPOINT ["docker-entrypoint.sh"]

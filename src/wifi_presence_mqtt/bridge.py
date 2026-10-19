@@ -17,6 +17,7 @@ from datetime import UTC, datetime, timedelta
 import importlib
 import json
 import logging
+import os
 from pathlib import Path
 import ssl
 import time
@@ -44,6 +45,11 @@ TRIGGERED_POLL_COOLDOWN = 5.0
 EVENT_BUFFER = 200
 RECONNECT_MIN = 5.0
 RECONNECT_MAX = 60.0
+
+
+def _uid() -> str:
+    getuid = getattr(os, "getuid", None)
+    return str(getuid()) if getuid else "?"
 
 
 def utcnow() -> datetime:
@@ -229,6 +235,13 @@ class Bridge:
             temp = self.state_file.with_suffix(".tmp")
             temp.write_text(json.dumps(data), encoding="utf-8")
             temp.replace(self.state_file)
+        except PermissionError as err:
+            _LOGGER.warning(
+                "Cannot save state to %s (%s): the data directory isn't writable for user %s. "
+                "Make it so (e.g. chown it to that user) or don't set a container user; until "
+                "then visits and today's counts won't survive a restart",
+                self.state_file, err.strerror, _uid(),
+            )
         except OSError as err:
             _LOGGER.warning("Cannot save state to %s: %s", self.state_file, err)
 
