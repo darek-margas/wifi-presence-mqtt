@@ -5,7 +5,7 @@ own lists of connected clients.** For Node-RED, openHAB, ioBroker, Domoticz, Hom
 Assistant or anything else that speaks MQTT. Runs as a small container; nothing to
 install on the access points.
 
-> **Beta (0.1.0b1).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
+> **Beta (0.1.0b2).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
 > and Cisco Catalyst 9800 (SSH or SNMP). UniFi and TP-Link Omada come in a later beta.
 > Feedback welcome in the [issues](https://github.com/darek-margas/wifi-presence-mqtt/issues).
 

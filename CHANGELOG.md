@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.0b2
+
+From running the image with the example compose file:
+
+- **State is saved with a bind-mounted `./data`.** Docker creates that folder as root,
+  and the bridge (uid 1000) couldn't write to it, so visits and today's counts didn't
+  survive a restart. The container now starts as root only to hand `/data` to the bridge
+  user, then runs the bridge as that user (never as root). Run with your own `user:`,
+  it leaves `/data` alone and says clearly when it can't write there.
+- **No false events after a restart from a state saved while presence was unknown**
+  (e.g. stopped before any access point was read).
+- Tested as a container (amd64 and arm64 builds; the example compose file with
+  Mosquitto) against OpenWrt VMs: a roam between access points, a return 3 s after
+  rejoining via instant arrivals, and `docker compose restart` keeping the visit with no
+  event; Docker reports it healthy.
+
 ## 0.1.0b1
 
 First beta: Wi-Fi presence over MQTT, without Home Assistant.
