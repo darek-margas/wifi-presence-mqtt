@@ -11,6 +11,10 @@ if [ "$(id -u)" = "0" ]; then
     fi
     # The bridge user's own home, not root's (libraries look for ~/.ssh there).
     export HOME="$DATA_DIR" USER=bridge
-    exec setpriv --reuid=1000 --regid=1000 --clear-groups wifi-presence-mqtt "$@"
+    # Keep one capability: binding ports below 1024, for SNMP traps on UDP 162 (D-Link
+    # instant arrivals). Nothing else; the container needs no privileges.
+    exec setpriv --reuid=1000 --regid=1000 --clear-groups \
+        --inh-caps=+net_bind_service --ambient-caps=+net_bind_service \
+        wifi-presence-mqtt "$@"
 fi
 exec wifi-presence-mqtt "$@"

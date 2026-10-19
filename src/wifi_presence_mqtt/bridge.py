@@ -23,7 +23,7 @@ import ssl
 import time
 from typing import Any, Protocol
 
-from wifi_ap_associations import DRIVERS, AccessPointDriver, AccessPointError
+from wifi_ap_associations import DRIVERS, AccessPointDriver, AccessPointError, snmp_trap
 from wifi_ap_associations.presence import AccessPointRead, stored_at
 from wifi_ap_associations.tracker import (
     AllAccessPointsFailed,
@@ -180,9 +180,15 @@ class Bridge:
             ap.id: DRIVERS[ap.type](dict(ap.settings)) for ap in config.access_points
         }
         self.grace = timedelta(seconds=config.presence.grace_period)
+        fast = config.presence.fast_departure
         self.tracker = PresenceTracker(
-            self.grace, poll_interval=timedelta(seconds=config.presence.poll_interval)
+            self.grace,
+            poll_interval=timedelta(seconds=config.presence.poll_interval),
+            fast_departure=timedelta(seconds=fast) if fast else None,
         )
+        # D-Link DAPs report joins as SNMP traps to this port (one listener for all).
+        snmp_trap.LISTENER.configure(port=config.presence.snmp_trap_port)
+        self._departure_polls: dict[str, asyncio.TimerHandle] = {}
         self.trigger = asyncio.Event()
         self.data_dir = Path(config.data_dir)
         self.state_file = self.data_dir / "state.json"
@@ -289,6 +295,7 @@ class Bridge:
                 self.access_points,
                 ap_names,
                 outage,
+                self.tracker.away_since(device.mac, now),
             )
             for device in self.config.devices
         }
@@ -385,6 +392,20 @@ class Bridge:
             await self.poll_once()
             due = last + interval
 
+    def on_leave(self, ap_id: str) -> None:
+        """An access point reported a client leaving (fast departure is on): note it,
+        and poll at the deadline so a device still missing then turns away on time."""
+        fast = self.tracker.fast_departure
+        if fast is None:
+            return
+        _LOGGER.debug("Client left %s: devices missing from it are away in %s", ap_id, fast)
+        self.tracker.note_leave(ap_id, utcnow())
+        if (previous := self._departure_polls.pop(ap_id, None)) is not None:
+            previous.cancel()
+        self._departure_polls[ap_id] = asyncio.get_running_loop().call_later(
+            fast.total_seconds() + 1, self.trigger.set
+        )
+
     def start_watchers(self) -> list[asyncio.Task[None]]:
         """Instant arrivals: one watch per watch key, for the types that can."""
         if not self.config.presence.instant_arrivals:
@@ -400,6 +421,7 @@ class Bridge:
                     watch_forever(
                         driver,
                         self.trigger.set,
+                        on_leave=(lambda i=ap_id: self.on_leave(i)) if self.tracker.fast_departure else None,
                         on_paused=lambda reason, i=ap_id: _LOGGER.info(
                             "Instant arrivals for %s paused (%s); polling goes on", i, reason
                         ),

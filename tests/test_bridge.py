@@ -347,3 +347,31 @@ def test_a_state_saved_while_presence_was_unknown_raises_no_event(tmp_path, monk
     round_(second)
     assert link.topic("device/phone/state") == "home"
     assert link.events == []
+
+
+def test_fast_departure_after_a_reported_leave(tmp_path, monkeypatch) -> None:
+    clock = Clock(monkeypatch)
+    link = FakeLink()
+    b = Bridge(make_config(tmp_path, fast_departure=30), link)
+    b.restore()
+    FakeAP.answers = {"hall": [(PHONE, -50)], "den": []}
+    round_(b)
+    assert link.topic("device/phone/state") == "home"
+
+    async def leave() -> None:
+        b.on_leave("hall")  # the access point reported a client leaving
+        assert "hall" in b._departure_polls  # the poll at the deadline is booked
+        b._departure_polls.pop("hall").cancel()
+
+    clock.advance(10)
+    asyncio.run(leave())
+    FakeAP.answers = {"hall": [], "den": []}
+    clock.advance(5)
+    round_(b)
+    assert link.topic("device/phone/state") == "home"  # 5 s after the leave
+    clock.advance(30)
+    round_(b)
+    # 35 s after the leave, far short of the 3-minute grace period: away.
+    assert link.topic("device/phone/state") == "not_home"
+    assert link.topic("device/phone/away_since") == "2026-10-20T08:00:40+00:00"  # leave + 30 s
+    assert link.events[-1]["event"] == "left"

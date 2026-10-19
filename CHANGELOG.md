@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0b4
+
+- **Instant arrivals for D-Link DAP** through SNMP traps: set the DAP's trap server to the
+  bridge's host and publish the port (`ports: ["162:162/udp"]`, now in the example). The
+  container still isn't privileged: it keeps only the `NET_BIND_SERVICE` capability when
+  it drops to its own user, enough to open port 162 (checked: uid 1000, that one
+  capability). `SNMP_TRAP_PORT` for another port. Tested in the container against a real
+  DAP-2610: its traps arrive with the DAP's own address and are logged in full at debug.
+- **Fast departure** (`FAST_DEPARTURE`, seconds, off by default): when an access point
+  reports a client leaving, a device missing from it is away after that time instead of
+  after the grace period; `away_since` follows it.
+- Uses wifi-ap-associations 0.13.0.
+
 ## 0.1.0b3
 
 - **Home Assistant MQTT discovery** (`HA_DISCOVERY=true`, or `homeassistant.discovery`

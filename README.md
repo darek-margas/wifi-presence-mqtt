@@ -5,7 +5,7 @@ own lists of connected clients.** For Node-RED, openHAB, ioBroker, Domoticz, Hom
 Assistant or anything else that speaks MQTT. Runs as a small container; nothing to
 install on the access points.
 
-> **Beta (0.1.0b3).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
+> **Beta (0.1.0b4).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP
 > and Cisco Catalyst 9800 (SSH or SNMP). UniFi and TP-Link Omada come in a later beta.
 > Guides in the [wiki](https://github.com/darek-margas/wifi-presence-mqtt/wiki); feedback
 > welcome in the [issues](https://github.com/darek-margas/wifi-presence-mqtt/issues).
@@ -67,6 +67,8 @@ services:
     volumes:
       - ./config.yaml:/config/config.yaml:ro
       - ./data:/data                       # visits and today's counts across restarts
+    ports:
+      - "162:162/udp"                      # only for D-Link DAP instant arrivals (SNMP traps)
     depends_on:
       - mosquitto
 
@@ -122,6 +124,8 @@ takes the environment's value (logged once at start).
 | `POLL_INTERVAL` | `presence.poll_interval` | `60` | seconds between reads (10-3600) |
 | `INSTANT_ARRIVALS` | `presence.instant_arrivals` | `true` | |
 | `PUBLISH_ALL_CLIENTS` | `presence.publish_all_clients` | `false` | also publish every client seen |
+| `FAST_DEPARTURE` | `presence.fast_departure` | `0` (off) | seconds after an access point reports a client leaving; see the [wiki](https://github.com/darek-margas/wifi-presence-mqtt/wiki/Configuration#fast-departure) |
+| `SNMP_TRAP_PORT` | `presence.snmp_trap_port` | `162` | D-Link DAP instant arrivals (SNMP traps) |
 | `HA_DISCOVERY` | `homeassistant.discovery` | `false` | entities in Home Assistant (see below) |
 | `HA_DISCOVERY_PREFIX` | `homeassistant.discovery_prefix` | `homeassistant` | |
 | `LOG_LEVEL` | | `info` | `debug` shows each line the access points report |

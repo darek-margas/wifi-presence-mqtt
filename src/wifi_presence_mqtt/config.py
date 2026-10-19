@@ -61,6 +61,8 @@ class PresenceSettings:
     poll_interval: int = 60
     instant_arrivals: bool = True
     publish_all_clients: bool = False
+    fast_departure: int = 0  # seconds after a reported leave; 0 = off
+    snmp_trap_port: int = 162  # D-Link DAP instant arrivals
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +130,8 @@ _SETTINGS = (
     _Setting("presence", "poll_interval", "POLL_INTERVAL", "int", 60, minimum=10, maximum=3600),
     _Setting("presence", "instant_arrivals", "INSTANT_ARRIVALS", "bool", True),
     _Setting("presence", "publish_all_clients", "PUBLISH_ALL_CLIENTS", "bool", False),
+    _Setting("presence", "fast_departure", "FAST_DEPARTURE", "int", 0, minimum=0, maximum=3600),
+    _Setting("presence", "snmp_trap_port", "SNMP_TRAP_PORT", "int", 162, minimum=1, maximum=65535),
     _Setting("homeassistant", "discovery", "HA_DISCOVERY", "bool", False),
     _Setting("homeassistant", "discovery_prefix", "HA_DISCOVERY_PREFIX", "str", "homeassistant"),
 )

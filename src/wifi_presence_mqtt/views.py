@@ -65,6 +65,7 @@ def device_view(
     access_points: Mapping[str, AccessPointConfig],
     ap_names: Mapping[str, str],
     outage: bool,
+    departed: datetime | None = None,
 ) -> DeviceView:
     """The device's state after a round.
 
@@ -82,7 +83,9 @@ def device_view(
     if outage:
         return DeviceView(UNKNOWN, "", "", "", attributes)
     if current is None:
-        away_since = _iso(known.last_seen + grace) if known is not None else ""
+        if departed is None and known is not None:
+            departed = known.last_seen + grace
+        away_since = _iso(departed)
         if known is not None:
             attributes["last_seen"] = _iso(known.last_seen)
         attributes["away_since"] = away_since
