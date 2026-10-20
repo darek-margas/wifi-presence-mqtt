@@ -400,3 +400,36 @@ def test_a_later_leave_never_postpones_an_earlier_deadline(tmp_path) -> None:
 
     asyncio.run(main())
     assert fired == ["poll"]
+
+
+def test_a_restart_rebooks_pending_deadline_polls(tmp_path, monkeypatch) -> None:
+    clock = Clock(monkeypatch)
+    first = Bridge(make_config(tmp_path, fast_departure=30), FakeLink())
+    first.restore()
+    FakeAP.answers = {"hall": [(PHONE, -50)], "den": []}
+    round_(first)
+    clock.advance(10)
+    first.tracker.note_leave("hall", bridge_module.utcnow())  # deadline in 30 s
+    FakeAP.answers = {"hall": [], "den": []}
+    clock.advance(5)
+    round_(first)
+    first.save(clean=True)
+    clock.advance(5)  # restart 10 s after the leave, 20 s before its deadline
+
+    second = Bridge(make_config(tmp_path, fast_departure=30), FakeLink())
+    second.restore()
+
+    async def booked() -> list[float]:
+        loop = asyncio.get_running_loop()
+        second.book_pending_departures()
+        delays = [h.when() - loop.time() for h in second._departure_polls]
+        second.cancel_departure_polls()
+        return delays
+
+    delays = asyncio.run(booked())
+    assert len(delays) == 1 and 20 < delays[0] <= 21  # the deadline, then 1 s
+
+    # With fast departure turned off, the saved deadline means nothing.
+    off = Bridge(make_config(tmp_path), FakeLink())
+    off.restore()
+    assert off.tracker.pending_departures(bridge_module.utcnow()) == []

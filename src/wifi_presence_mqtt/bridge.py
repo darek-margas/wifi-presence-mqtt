@@ -404,12 +404,23 @@ class Bridge:
             return
         _LOGGER.debug("Client left %s: devices missing from it are away in %s", ap_id, fast)
         self.tracker.note_leave(ap_id, utcnow())
+        self._book_departure_poll(fast.total_seconds())
+
+    def book_pending_departures(self) -> None:
+        """After restore(), in the event loop: fast departures that were pending at the
+        restart are still due on time."""
+        now = utcnow()
+        for at in self.tracker.pending_departures(now):
+            self._book_departure_poll((at - now).total_seconds())
+
+    def _book_departure_poll(self, delay: float) -> None:
+        """Poll just after a fast departure deadline `delay` seconds from now."""
 
         def due() -> None:
             self._departure_polls.discard(handle)
             self.trigger.set()
 
-        handle = asyncio.get_running_loop().call_later(fast.total_seconds() + 1, due)
+        handle = asyncio.get_running_loop().call_later(delay + 1, due)
         self._departure_polls.add(handle)
 
     def cancel_departure_polls(self) -> None:
@@ -459,6 +470,7 @@ async def run(config: Config) -> None:
     link = MqttLink(config.mqtt)
     bridge = Bridge(config, link)
     bridge.restore()
+    bridge.book_pending_departures()
     tasks = [asyncio.create_task(link.run(), name="mqtt")]
     tasks += bridge.start_watchers()
     poller = asyncio.create_task(bridge.poll_loop(), name="poll")
