@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0b5
+
+- **Standalone TP-Link EAP over SNMP** (`tplink_eap_snmp`, experimental): EAP access
+  points without an Omada controller, SNMP v2c or v3. Presence and which AP only: the
+  EAP's client table has no SSID, band or signal, so with discovery its access points
+  get no signal quality sensor.
+- Uses wifi-ap-associations 0.13.1.
+
 ## 0.1.0b4
 
 - **Instant arrivals for D-Link DAP** through SNMP traps: set the DAP's trap server to the

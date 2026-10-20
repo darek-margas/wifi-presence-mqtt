@@ -68,8 +68,10 @@ def _entities(config: Config) -> list[tuple[str, str, str, str]]:
         entities += [
             ("binary_sensor", f"{stem}_connectivity", "ap_connectivity", ap.id),
             ("sensor", f"{stem}_clients", "ap_clients", ap.id),
-            ("sensor", f"{stem}_signal_quality", "ap_signal_quality", ap.id),
         ]
+        # Not for types whose clients come without signal (it would always be unknown).
+        if "signal" in DRIVERS[ap.type].CLIENT_DETAILS:
+            entities.append(("sensor", f"{stem}_signal_quality", "ap_signal_quality", ap.id))
     return entities
 
 

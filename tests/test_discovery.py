@@ -104,3 +104,16 @@ def test_turning_discovery_off_or_removing_a_device_removes_its_entities(tmp_pat
     cleared = {t for t, p in link.retained.items() if p == "" and t.startswith("homeassistant/")}
     assert "homeassistant/device_tracker/wifi_presence_phone/config" in cleared
     assert "homeassistant/binary_sensor/wifi_presence_bridge_status/config" in cleared
+
+
+def test_no_signal_quality_entity_for_types_without_signal(tmp_path, monkeypatch) -> None:
+    Clock(monkeypatch)
+    monkeypatch.setattr(FakeAP, "CLIENT_DETAILS", frozenset())  # MACs only, as TP-Link EAP
+    FakeAP.answers = {"hall": [(PHONE, None)], "den": []}
+    link = FakeLink()
+    b = Bridge(with_discovery(make_config(tmp_path)), link)
+    b.restore()
+    round_(b)
+    found = configs(link)
+    assert "homeassistant/sensor/wifi_presence_ap_hall_clients/config" in found
+    assert not any("_ap_" in t and t.endswith("_signal_quality/config") for t in found)
