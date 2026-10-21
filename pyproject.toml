@@ -12,7 +12,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Darek Margas" }]
 requires-python = ">=3.12"
 dependencies = [
-    "wifi-ap-associations>=0.13.1,<0.14",
+    "wifi-ap-associations>=0.14.0,<0.15",
     "aiomqtt>=2.3,<3",
     "ruamel.yaml>=0.18",
 ]

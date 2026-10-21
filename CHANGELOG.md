@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0b6
+
+- **UniFi and TP-Link Omada access points** (`unifi_network`, `omada_network`): the library
+  now logs in to the controller itself, so the bridge reads them too. Each entry has the
+  controller's `host`, `port` (443; 8443 for a self-hosted UniFi Network application,
+  8043 for an Omada software controller), `username`, `password` (a local account),
+  `site` and the AP's `ap_mac`; entries with the same controller share one login and one
+  read. UniFi instant arrivals come from the controller's event stream. Omada is
+  experimental.
+- The controller sessions are closed when the bridge stops.
+- Uses wifi-ap-associations 0.14.0.
+
 ## 0.1.0b5
 
 - **Standalone TP-Link EAP over SNMP** (`tplink_eap_snmp`, experimental): EAP access

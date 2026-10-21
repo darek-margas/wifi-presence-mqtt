@@ -5,9 +5,9 @@ own lists of connected clients.** For Node-RED, openHAB, ioBroker, Domoticz, Hom
 Assistant or anything else that speaks MQTT. Runs as a small container; nothing to
 install on the access points.
 
-> **Beta (0.1.0b5).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP,
-> Cisco Catalyst 9800 (SSH or SNMP) and standalone TP-Link EAP (SNMP, experimental).
-> UniFi and TP-Link Omada through a controller come in a later beta.
+> **Beta (0.1.0b6).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP,
+> Cisco Catalyst 9800 (SSH or SNMP), UniFi (through its controller), and TP-Link Omada
+> (through its controller) and standalone TP-Link EAP (SNMP), both experimental.
 > Guides in the [wiki](https://github.com/darek-margas/wifi-presence-mqtt/wiki); feedback
 > welcome in the [issues](https://github.com/darek-margas/wifi-presence-mqtt/issues).
 
@@ -165,6 +165,8 @@ Types and their keys (the same settings as the integration's setup form):
 | `cisco_wlc_ssh` | `host`, `port`, `username`, `password`, `ap_name` (one entry per AP) | [Cisco 9800](https://github.com/darek-margas/wifi-association-presence/wiki/Cisco-Catalyst-9800) |
 | `cisco_wlc_snmp` | `host`, `port` (161), `ap_name`, `snmp_version` (v2c / v3), `community`, or `username`, `auth_key`, `auth_protocol`, `priv_key`, `priv_protocol` | [Cisco 9800](https://github.com/darek-margas/wifi-association-presence/wiki/Cisco-Catalyst-9800#over-snmp) |
 | `tplink_eap_snmp` | `host`, `port` (161), `snmp_version` (v2c / v3), `community`, or `username`, `auth_key`, `auth_protocol`, `priv_key`, `priv_protocol` | [TP-Link EAP](https://github.com/darek-margas/wifi-association-presence/wiki/TP-Link-EAP) (experimental) |
+| `unifi_network` | the controller's `host`, `port` (443; 8443 self-hosted), `username`, `password`, `site` (default), `verify_ssl` (no), and the AP's `ap_mac` (one entry per AP) | [UniFi](https://github.com/darek-margas/wifi-association-presence/wiki/UniFi) |
+| `omada_network` | the controller's `host`, `port` (443; 8043 software controller), `username`, `password`, `site` (Default), `verify_ssl` (no), and the AP's `ap_mac` (one entry per EAP) | [TP-Link Omada](https://github.com/darek-margas/wifi-association-presence/wiki/TP-Link-Omada) (experimental) |
 
 The guides are the integration's wiki: the access point side (accounts, permissions) is
 the same.
@@ -232,8 +234,8 @@ removes its entities at the next start.
 
 Running Home Assistant anyway? The
 [Wi-Fi Association Presence](https://github.com/darek-margas/wifi-association-presence)
-integration does the same inside Home Assistant (plus UniFi and TP-Link Omada, and the
-area of the access point's own device). The bridge with discovery suits a setup where
+integration does the same inside Home Assistant (plus the area of the access point's
+own device). The bridge with discovery suits a setup where
 the access points are reached from another machine, or Home Assistant isn't the only
 consumer.
 

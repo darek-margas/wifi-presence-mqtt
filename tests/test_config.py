@@ -142,7 +142,7 @@ def test_every_fault_is_reported_with_its_place(tmp_path: Path) -> None:
         "line 4, column 3: mqtt: unknown key 'prot' (did you mean \"port\"?)",
         "line 6, column 3: presence.poll_interval: 'sixty' is not a whole number of seconds",
         "line 7, column 3: presence.grace_period: 5 is outside 30 to 86400",
-        "line 8, column 1: unknown section 'controllers' (UniFi and Omada controllers come in a later beta)",
+        "line 8, column 1: unknown section 'controllers' (UniFi and Omada access points take their controller's login in each entry)",
         "line 14, column 5: access_points[0] (hallway): password: ${NOT_SET} is not set in the environment",
         "line 20, column 5: access_points[1] (upstairs): unknown key 'caps' for type mikrotik_capsman_ssh (did you mean \"cap\"?)",
         "access_points[1] (upstairs): missing required key 'cap' for type mikrotik_capsman_ssh",
@@ -159,9 +159,9 @@ def test_every_fault_is_reported_with_its_place(tmp_path: Path) -> None:
     assert all(e.startswith("config error: ") for e in found)
 
 
-def test_unknown_types_and_controller_types(tmp_path: Path) -> None:
+def test_controller_types_need_their_login_and_the_ap(tmp_path: Path) -> None:
     found = errors(tmp_path, GOOD.replace("type: openwrt_ssh", "type: unifi_network"))
-    assert any("reads through a controller connection" in e for e in found)
+    assert any("missing required key 'ap_mac' for type unifi_network" in e for e in found)
 
 
 def test_secrets_never_appear_in_messages(tmp_path: Path) -> None:
@@ -211,3 +211,23 @@ def test_check_config_exits_1_with_every_error_and_0_when_good(tmp_path: Path, m
     monkeypatch.setenv("CONFIG_FILE", write(tmp_path, GOOD))
     assert main(["--check-config"]) == 0
     assert "configuration OK: 2 access point(s), 1 device(s), broker broker.lan:1883" in capsys.readouterr().out
+
+
+def test_a_unifi_access_point_with_its_controller_login(tmp_path: Path) -> None:
+    text = GOOD.replace("""  - id: upstairs
+    type: mikrotik_capsman_ssh
+    host: 192.168.1.1
+    username: presence
+    password: ${MIKROTIK_PASSWORD}
+    cap: ap_upstairs""", """  - id: porch
+    type: unifi_network
+    host: 192.168.1.1
+    username: presence
+    password: ${MIKROTIK_PASSWORD}
+    ap_mac: 78:8a:20:00:00:10""")
+    config = load({"CONFIG_FILE": write(tmp_path, text), **ENV})
+    porch = config.access_points[1]
+    assert porch.settings == {
+        "host": "192.168.1.1", "port": 443, "username": "presence", "password": "mt-secret",
+        "site": "default", "verify_ssl": "no", "ap_mac": "78:8a:20:00:00:10",
+    }

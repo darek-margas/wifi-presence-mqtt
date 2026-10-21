@@ -488,5 +488,7 @@ async def run(config: Config) -> None:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         bridge.cancel_departure_polls()
+        for driver in bridge.drivers.values():  # e.g. a UniFi or Omada controller session
+            await driver.async_close()
         bridge.save(clean=True)
         _LOGGER.info("Stopped; state saved")

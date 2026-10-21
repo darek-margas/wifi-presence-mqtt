@@ -32,7 +32,6 @@ _ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 # Types whose access points are read through a controller connection; the bridge makes
 # that connection itself from a later beta on.
-CONTROLLER_TYPES = frozenset({"unifi_network", "omada_network"})
 
 
 class ConfigError(Exception):
@@ -368,14 +367,9 @@ def _access_points(reader: _Reader, data: CommentedMap) -> list[AccessPointConfi
         if type_ is None:
             reader.error(place, f"{label}: missing required key 'type'")
             continue
-        if type_ in CONTROLLER_TYPES:
-            reader.error(reader.where(item, "type"),
-                         f"{label}: type {type_!r} reads through a controller connection, which "
-                         "the bridge doesn't make yet (coming in a later beta)")
-            continue
         driver_cls = DRIVERS.get(str(type_))
         if driver_cls is None:
-            known = sorted(t for t in DRIVERS if t not in CONTROLLER_TYPES)
+            known = sorted(DRIVERS)
             reader.error(reader.where(item, "type"),
                          f"{label}: type {type_!r} is not a known type{_suggest(type_, known)} "
                          f"(known: {', '.join(known)})")
@@ -539,8 +533,8 @@ def load(env: Mapping[str, str] | None = None) -> Config:
         raise ConfigError(reader.errors)
     for key in data:
         if key not in _TOP_LEVEL:
-            hint = (" (UniFi and Omada controllers come in a later beta)" if key == "controllers"
-                    else _suggest(key, _TOP_LEVEL))
+            hint = (" (UniFi and Omada access points take their controller's login in each "
+                    "entry)" if key == "controllers" else _suggest(key, _TOP_LEVEL))
             reader.error(reader.where(data, key), f"unknown section {key!r}{hint}")
     values, notes = _settings(reader, data)
     access_points = _access_points(reader, data)
