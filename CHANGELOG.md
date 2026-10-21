@@ -3,7 +3,10 @@
 ## 0.1.0b7
 
 - UniFi instant arrivals poll the controller anew instead of reusing its client list
-  from up to 20 seconds before (library 0.14.1).
+  from up to 20 seconds before, and so does fast departure's deadline poll after a
+  disconnect (library 0.14.1).
+- Two entries for the same UniFi or Omada access point are refused as duplicates also
+  when the MAC is written differently (`78-8a-…` and `78:8A:…`).
 - Uses wifi-ap-associations 0.14.1.
 
 ## 0.1.0b6

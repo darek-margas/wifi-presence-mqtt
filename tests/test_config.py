@@ -231,3 +231,27 @@ def test_a_unifi_access_point_with_its_controller_login(tmp_path: Path) -> None:
         "host": "192.168.1.1", "port": 443, "username": "presence", "password": "mt-secret",
         "site": "default", "verify_ssl": "no", "ap_mac": "78:8a:20:00:00:10",
     }
+
+
+def test_one_ap_twice_with_its_mac_spelled_differently(tmp_path: Path) -> None:
+    """Local review: the identity compares MACs normalized, not as typed."""
+    text = GOOD.replace("""  - id: upstairs
+    type: mikrotik_capsman_ssh
+    host: 192.168.1.1
+    username: presence
+    password: ${MIKROTIK_PASSWORD}
+    cap: ap_upstairs""", """  - id: porch
+    type: unifi_network
+    host: 192.168.1.1
+    username: presence
+    password: x
+    ap_mac: 78:8a:20:00:00:10
+  - id: porch_again
+    type: unifi_network
+    host: 192.168.1.1
+    username: presence
+    password: x
+    ap_mac: 78-8A-20-00-00-10""")
+    found = errors(tmp_path, text)
+    assert any("access_points[2] (porch_again): the same access point as access_points[1] (porch)" in e
+               for e in found), found
