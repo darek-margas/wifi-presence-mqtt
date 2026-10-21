@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0b7
+
+- UniFi instant arrivals poll the controller anew instead of reusing its client list
+  from up to 20 seconds before (library 0.14.1).
+- Uses wifi-ap-associations 0.14.1.
+
 ## 0.1.0b6
 
 - **UniFi and TP-Link Omada access points** (`unifi_network`, `omada_network`): the library
