@@ -2,7 +2,7 @@
 # broker already, and set mqtt.host / MQTT_HOST to it).
 services:
   wifi-presence:
-    image: ghcr.io/darek-margas/wifi-presence-mqtt:beta
+    image: ghcr.io/darek-margas/wifi-presence-mqtt:latest
     restart: unless-stopped
     env_file: .env                       # MQTT_PASSWORD=..., HALLWAY_PASSWORD=..., TZ=..., HA_DISCOVERY=true
     volumes:

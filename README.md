@@ -5,7 +5,7 @@ own lists of connected clients.** For Node-RED, openHAB, ioBroker, Domoticz, Hom
 Assistant or anything else that speaks MQTT. Runs as a small container; nothing to
 install on the access points.
 
-> **Beta (0.1.0b7).** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP,
+> **0.1.0.** Works with OpenWrt, MikroTik RouterOS (also CAPsMAN), D-Link DAP,
 > Cisco Catalyst 9800 (SSH or SNMP), UniFi (through its controller), standalone TP-Link
 > EAP (SNMP), and TP-Link Omada (through its controller, experimental).
 > Guides in the [wiki](https://github.com/darek-margas/wifi-presence-mqtt/wiki); feedback
@@ -40,7 +40,7 @@ from the shared library
 3. Check it before starting:
 
    ```bash
-   docker run --rm -v ./config.yaml:/config/config.yaml:ro --env-file .env ghcr.io/darek-margas/wifi-presence-mqtt:beta --check-config
+   docker run --rm -v ./config.yaml:/config/config.yaml:ro --env-file .env ghcr.io/darek-margas/wifi-presence-mqtt:latest --check-config
    ```
 
 4. `docker compose up -d`, then watch the topics:
@@ -62,7 +62,7 @@ A complete setup: the bridge and a Mosquitto broker of its own, in one folder wi
 ```yaml
 services:
   wifi-presence:
-    image: ghcr.io/darek-margas/wifi-presence-mqtt:beta
+    image: ghcr.io/darek-margas/wifi-presence-mqtt:latest
     restart: unless-stopped
     env_file: .env                         # credentials and settings, see below
     volumes:

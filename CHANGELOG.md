@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.0 — first release
+
+The same bridge as 0.1.0b7, now on the `latest` image tag. Before releasing it ran next
+to the Home Assistant integration in one house, both reading the same access points:
+five D-Link DAPs over SSH (four indoor on firmware v2.06, an outdoor DAP-3662 on v2.01),
+four phones and a watch, a broker on another machine, MQTT discovery into Home
+Assistant. Every tracker's state, access point, area, SSID and band matched the
+integration's, and so did each access point's client count (24, 22, 8, 22 and 4).
+Removing the test access points from the configuration, and later turning discovery
+off, removed their entities from Home Assistant at the next start (13, then 44).
+
+The first poll after one start failed on all five DAPs at once (`ConnectionLost` after
+40 s) and the next one, 20 s later, read them all. It didn't happen again in three fresh
+containers polling all five together, each read in under a second.
+
+- Uses wifi-ap-associations 0.14.2 (standalone TP-Link EAP no longer experimental).
+- Container tags: `latest` and `0.1.0`; `beta` stays at 0.1.0b7 until the next beta.
+
 ## 0.1.0b7
 
 - UniFi instant arrivals poll the controller anew instead of reusing its client list

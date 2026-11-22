@@ -2,7 +2,7 @@
 # Mount it at /config/config.yaml. Credentials stay in the environment: ${NAME} is
 # replaced by that variable (or by the content of the file NAME_FILE names).
 # Check it with:  docker run --rm -v ./config.yaml:/config/config.yaml:ro --env-file .env \
-#                   ghcr.io/darek-margas/wifi-presence-mqtt:beta --check-config
+#                   ghcr.io/darek-margas/wifi-presence-mqtt:latest --check-config
 
 mqtt:
   host: mosquitto                  # or MQTT_HOST in the environment
